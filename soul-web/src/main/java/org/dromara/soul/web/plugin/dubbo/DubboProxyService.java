@@ -1,19 +1,18 @@
 /*
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements.  See the NOTICE file distributed with
+ *   this work for additional information regarding copyright ownership.
+ *   The ASF licenses this file to You under the Apache License, Version 2.0
+ *   (the "License"); you may not use this file except in compliance with
+ *   the License.  You may obtain a copy of the License at
  *
- *  * Licensed to the Apache Software Foundation (ASF) under one or more
- *  * contributor license agreements.  See the NOTICE file distributed with
- *  * this work for additional information regarding copyright ownership.
- *  * The ASF licenses this file to You under the Apache License, Version 2.0
- *  * (the "License"); you may not use this file except in compliance with
- *  * the License.  You may obtain a copy of the License at
- *  *
- *  *     http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
  *
  */
 
@@ -77,7 +76,14 @@ public class DubboProxyService {
 
         ReferenceConfigCache referenceConfigCache = ReferenceConfigCache.getCache();
 
-        GenericService genericService = referenceConfigCache.get(reference);
+        GenericService genericService = null;
+        try {
+            genericService = referenceConfigCache.get(reference);
+        } catch (Exception ex) {
+            referenceConfigCache.destroy(reference);
+            LogUtils.error(LOGGER, ex::getMessage);
+            throw new SoulException(ex.getMessage());
+        }
 
         // 用Map表示POJO参数，如果返回值为POJO也将自动转成Map
         final String method = paramMap.get(DubboParamConstants.METHOD).toString();

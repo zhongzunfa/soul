@@ -16,36 +16,36 @@
  *
  */
 
-package org.dromara.soul.web.influxdb.entity;
+package org.dromara.soul.test.http.controller;
 
-import lombok.Data;
 
-import java.io.Serializable;
+import org.dromara.soul.test.http.dto.UserDTO;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
- * this is influxDb entity.
+ * TestController.
  *
- * @author xiaoyu(Myth)
+ * @author xiaoyu
  */
-@Data
-public class MonitorDO implements Serializable {
+@RestController
+@RequestMapping("/test")
+public class HttpTestController {
 
-    private String module;
 
-    private String ip;
+    @PostMapping("/payment")
+    public UserDTO post(@RequestBody final UserDTO userDTO) {
+        return userDTO;
+    }
 
-    private String host;
 
-    private String method;
+    @GetMapping("/findByUserId")
+    public String findByUserId() {
+        return "helloWorld!";
+    }
 
-    private Integer count;
-
-    /**
-     *  success /error /timeout.
-     */
-    private String resultType;
-
-    private String rpcType;
-    
 
 }
