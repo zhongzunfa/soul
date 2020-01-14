@@ -18,8 +18,12 @@
 
 package org.dromara.soul.web.condition.strategy;
 
-import org.dromara.soul.common.dto.zk.ConditionZkDTO;
+import org.dromara.soul.common.constant.Constants;
+import org.dromara.soul.common.dto.ConditionData;
 import org.dromara.soul.common.enums.ParamTypeEnum;
+import org.dromara.soul.common.utils.ReflectUtils;
+import org.dromara.soul.web.request.RequestDTO;
+import org.dromara.soul.web.support.HostAddressUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
@@ -42,22 +46,37 @@ abstract class AbstractMatchStrategy {
      * @param exchange  the exchange
      * @return the string
      */
-    String buildRealData(final ConditionZkDTO condition, final ServerWebExchange exchange) {
+    String buildRealData(final ConditionData condition, final ServerWebExchange exchange) {
         String realData = "";
-        if (condition.getParamType().equals(ParamTypeEnum.QUERY.getName())) {
-            final MultiValueMap<String, String> queryParams = exchange.getRequest().getQueryParams();
-            realData = queryParams.getFirst(condition.getParamName());
-        } else if (Objects.equals(ParamTypeEnum.HOST.getName(), condition.getParamType())) {
-            realData = Objects.requireNonNull(exchange.getRequest().getRemoteAddress()).getHostString();
-        } else if (Objects.equals(ParamTypeEnum.IP.getName(), condition.getParamType())) {
-            realData = Objects.requireNonNull(exchange.getRequest().getRemoteAddress()).getAddress().getHostAddress();
-        } else if (Objects.equals(ParamTypeEnum.HEADER.getName(), condition.getParamType())) {
-            final HttpHeaders headers = exchange.getRequest().getHeaders();
-            final List<String> list = headers.get(condition.getParamName());
-            if (CollectionUtils.isEmpty(list)) {
-                return realData;
-            }
-            realData = Objects.requireNonNull(headers.get(condition.getParamName())).stream().findFirst().orElse("");
+        ParamTypeEnum paramTypeEnum = ParamTypeEnum.getParamTypeEnumByName(condition.getParamType());
+        switch (paramTypeEnum) {
+            case HEADER:
+                final HttpHeaders headers = exchange.getRequest().getHeaders();
+                final List<String> list = headers.get(condition.getParamName());
+                if (CollectionUtils.isEmpty(list)) {
+                    return realData;
+                }
+                realData = Objects.requireNonNull(headers.get(condition.getParamName())).stream().findFirst().orElse("");
+                break;
+            case URI:
+                realData = exchange.getRequest().getURI().getPath();
+                break;
+            case QUERY:
+                final MultiValueMap<String, String> queryParams = exchange.getRequest().getQueryParams();
+                realData = queryParams.getFirst(condition.getParamName());
+                break;
+            case HOST:
+                realData = HostAddressUtils.acquireHost(exchange);
+                break;
+            case IP:
+                realData = HostAddressUtils.acquireIp(exchange);
+                break;
+            case POST:
+                final RequestDTO requestDTO = exchange.getAttribute(Constants.REQUESTDTO);
+                realData = (String) ReflectUtils.getFieldValue(requestDTO, condition.getParamName());
+                break;
+            default:
+                break;
         }
         return realData;
     }

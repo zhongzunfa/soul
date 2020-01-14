@@ -48,6 +48,24 @@ public interface SelectorMapper {
      */
     List<SelectorDO> selectByQuery(SelectorQuery selectorQuery);
 
+
+    /**
+     * Find by plugin id list.
+     *
+     * @param pluginId the plugin id
+     * @return the list
+     */
+    List<SelectorDO> findByPluginId(String pluginId);
+
+
+    /**
+     * select select by name.
+     *
+     * @param name the name
+     * @return selector do
+     */
+    SelectorDO selectByName(String name);
+
     /**
      * count selector by query.
      *
@@ -60,7 +78,7 @@ public interface SelectorMapper {
      * insert selector.
      *
      * @param selectorDO {@linkplain SelectorDO}
-     * @return rows
+     * @return rows int
      */
     int insert(SelectorDO selectorDO);
 
@@ -68,7 +86,7 @@ public interface SelectorMapper {
      * insert selective selector.
      *
      * @param selectorDO {@linkplain SelectorDO}
-     * @return rows
+     * @return rows int
      */
     int insertSelective(SelectorDO selectorDO);
 
@@ -76,7 +94,7 @@ public interface SelectorMapper {
      * update selector.
      *
      * @param selectorDO {@linkplain SelectorDO}
-     * @return rows
+     * @return rows int
      */
     int update(SelectorDO selectorDO);
 
@@ -84,7 +102,7 @@ public interface SelectorMapper {
      * update selective selector.
      *
      * @param selectorDO {@linkplain SelectorDO}
-     * @return rows
+     * @return rows int
      */
     int updateSelective(SelectorDO selectorDO);
 
@@ -92,7 +110,23 @@ public interface SelectorMapper {
      * delete selector.
      *
      * @param id primary key.
-     * @return rows
+     * @return rows int
      */
     int delete(String id);
+
+    /**
+     * Delete by plugin id int.
+     *
+     * @param pluginId the plugin id
+     * @return the int
+     */
+    int deleteByPluginId(String pluginId);
+
+    /**
+     * list all.
+     *
+     * @return {@linkplain List}
+     */
+    List<SelectorDO> selectAll();
+
 }

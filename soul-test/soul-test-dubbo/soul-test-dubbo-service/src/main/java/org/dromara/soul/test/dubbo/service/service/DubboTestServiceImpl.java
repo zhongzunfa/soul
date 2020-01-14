@@ -18,11 +18,10 @@
 
 package org.dromara.soul.test.dubbo.service.service;
 
+import org.dromara.soul.client.common.annotation.SoulClient;
 import org.dromara.soul.test.dubbo.api.entity.DubboTest;
 import org.dromara.soul.test.dubbo.api.service.DubboTestService;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * DubboTestServiceImpl.
@@ -33,62 +32,31 @@ import java.util.List;
 public class DubboTestServiceImpl implements DubboTestService {
 
     @Override
-    public DubboTest findById(String id) {
+    @SoulClient(path = "/findById", desc = "根据用户查询")
+    public DubboTest findById(final String id) {
         DubboTest dubboTest = new DubboTest();
         dubboTest.setName("hhah");
         return dubboTest;
     }
 
     @Override
-    public DubboTest insert(DubboTest dubboTest) {
-        DubboTest test = new DubboTest();
-        test.setId("2");
-        test.setName("myth");
-        return test;
+    @SoulClient(path = "/findAll", desc = "获取所有")
+    public DubboTest findAll() {
+        DubboTest dubboTest = new DubboTest();
+        dubboTest.setName("findAll");
+        return dubboTest;
     }
 
     @Override
-    public DubboTest insert3(DubboTest dubboTest, String id, String name) {
-        DubboTest test = new DubboTest();
-        test.setId("test3" + id);
-        test.setName("xiaoyu3" + name);
-        return test;
+    @SoulClient(path = "/findByLong", desc = "findByLong")
+    public String findByLong(final Long id) {
+        return "Long id" + id;
     }
 
     @Override
-    public DubboTest findByIdAndName(String id, String name) {
-        DubboTest test = new DubboTest();
-        test.setName("测试调用多个String类型参数");
-        return test;
+    @SoulClient(path = "/insert", desc = "插入一条数据")
+    public DubboTest insert(final DubboTest dubboTest) {
+        return dubboTest;
     }
 
-    @Override
-    public DubboTest testEntityStringListParam(DubboTest dubboTest, String id, List<String> ids) {
-        DubboTest test = new DubboTest();
-        test.setName("测试调用参数为实体与String类型，List类型参数");
-        return test;
-    }
-
-    @Override
-    public DubboTest testEntityStringParam(DubboTest dubboTest, String id, Integer name) {
-        DubboTest test = new DubboTest();
-        test.setName("测试调用参数为实体与String类型参数");
-        return test;
-    }
-
-    @Override
-    public DubboTest testMultiEntity(DubboTest test1, DubboTest test2) {
-        DubboTest test = new DubboTest();
-        test.setName("测试调用多个实体参数");
-        test.setId("2222");
-        return test;
-    }
-
-    @Override
-    public DubboTest testListEntity(List<DubboTest> dubboTestList) {
-        DubboTest test = new DubboTest();
-        test.setName("测试调用List泛型实体参数");
-        test.setId("111111");
-        return test;
-    }
 }

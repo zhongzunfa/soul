@@ -22,6 +22,7 @@ import org.dromara.soul.admin.dto.PluginDTO;
 import org.dromara.soul.admin.page.CommonPager;
 import org.dromara.soul.admin.query.PluginQuery;
 import org.dromara.soul.admin.vo.PluginVO;
+import org.dromara.soul.common.dto.PluginData;
 
 import java.util.List;
 
@@ -33,20 +34,20 @@ import java.util.List;
 public interface PluginService {
 
     /**
-     * create or update plugin.
+     * Create or update string.
      *
-     * @param pluginDTO {@linkplain PluginDTO}
-     * @return rows int
+     * @param pluginDTO the plugin dto
+     * @return the string
      */
-    int createOrUpdate(PluginDTO pluginDTO);
+    String createOrUpdate(PluginDTO pluginDTO);
 
     /**
-     * delete plugins.
+     * Delete string.
      *
-     * @param ids primary key.
-     * @return rows int
+     * @param ids the ids
+     * @return the string
      */
-    int delete(List<String> ids);
+    String delete(List<String> ids);
 
     /**
      * find plugin by id.
@@ -66,17 +67,18 @@ public interface PluginService {
 
 
     /**
-     * Sync plugin data for mysql.
+     * List all list.
      *
-     * @param pluginId the plugin id
-     * @return the int
+     * @return the list
      */
-    int syncPluginData(String pluginId);
+    List<PluginData> listAll();
 
     /**
-     * sync plugins.
+     * Enabled string.
      *
-     * @return rows int
+     * @param ids     the ids
+     * @param enabled the enable
+     * @return the string
      */
-    int syncPluginAll();
+    String enabled(List<String> ids, Boolean enabled);
 }

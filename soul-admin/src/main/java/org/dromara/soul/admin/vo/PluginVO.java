@@ -48,9 +48,19 @@ public class PluginVO implements Serializable {
     private Integer code;
 
     /**
+     * plugin role.
+     */
+    private Integer role;
+
+    /**
      * plugin name.
      */
     private String name;
+
+    /**
+     * plugin config.
+     */
+    private String config;
 
     /**
      * whether enabled.
@@ -76,7 +86,8 @@ public class PluginVO implements Serializable {
     public static PluginVO buildPluginVO(final PluginDO pluginDO) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         PluginEnum pluginEnum = PluginEnum.getPluginEnumByName(pluginDO.getName());
-        return new PluginVO(pluginDO.getId(), pluginEnum == null ? null : pluginEnum.getCode(), pluginDO.getName(), pluginDO.getEnabled(),
+        return new PluginVO(pluginDO.getId(), pluginEnum == null ? null : pluginEnum.getCode(),
+                pluginDO.getRole(), pluginDO.getName(), pluginDO.getConfig(), pluginDO.getEnabled(),
                 dateTimeFormatter.format(pluginDO.getDateCreated().toLocalDateTime()),
                 dateTimeFormatter.format(pluginDO.getDateUpdated().toLocalDateTime()));
     }

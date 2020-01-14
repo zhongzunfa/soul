@@ -18,7 +18,11 @@
 
 package org.dromara.soul.web.condition.judge;
 
-import org.dromara.soul.common.dto.zk.ConditionZkDTO;
+import org.dromara.soul.common.dto.ConditionData;
+import org.dromara.soul.common.enums.ParamTypeEnum;
+import org.dromara.soul.common.utils.PathMatchUtils;
+
+import java.util.Objects;
 
 /**
  * this is match impl.
@@ -28,7 +32,10 @@ import org.dromara.soul.common.dto.zk.ConditionZkDTO;
 public class MatchOperatorJudge implements OperatorJudge {
 
     @Override
-    public Boolean judge(final ConditionZkDTO conditionZkDTO, final String realData) {
-        return realData.contains(conditionZkDTO.getParamValue().trim());
+    public Boolean judge(final ConditionData conditionData, final String realData) {
+        if (Objects.equals(ParamTypeEnum.URI.getName(), conditionData.getParamType())) {
+            return PathMatchUtils.match(conditionData.getParamValue().trim(), realData);
+        }
+        return realData.contains(conditionData.getParamValue().trim());
     }
 }

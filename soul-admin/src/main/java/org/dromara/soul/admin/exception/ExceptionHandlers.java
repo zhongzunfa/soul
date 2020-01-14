@@ -18,14 +18,13 @@
 
 package org.dromara.soul.admin.exception;
 
+import org.dromara.soul.admin.result.SoulAdminResult;
 import org.dromara.soul.common.exception.SoulException;
-import org.dromara.soul.common.result.SoulResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
-import reactor.core.publisher.Mono;
 
 /**
  * ControllerMethodResolver.
@@ -40,7 +39,7 @@ public class ExceptionHandlers {
 
     @ExceptionHandler(Exception.class)
     @ResponseBody
-    protected Mono<SoulResult> serverExceptionHandler(final Exception exception) {
+    protected SoulAdminResult serverExceptionHandler(final Exception exception) {
         LOGGER.error(exception.getMessage(), exception);
         String message;
         if (exception instanceof SoulException) {
@@ -49,6 +48,6 @@ public class ExceptionHandlers {
         } else {
             message = "系统繁忙,请稍后重试";
         }
-        return Mono.just(SoulResult.error(message));
+        return SoulAdminResult.error(message);
     }
 }

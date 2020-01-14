@@ -26,6 +26,11 @@ package org.dromara.soul.common.constant;
 public interface Constants {
 
     /**
+     * The constant APP_PARAM.
+     */
+    String APP_PARAM = "appParam";
+
+    /**
      * The constant REQUESTDTO.
      */
     String REQUESTDTO = "requestDTO";
@@ -41,14 +46,46 @@ public interface Constants {
     String DUBBO_RPC_RESULT = "dubbo_rpc_result";
 
     /**
+     * The constant DUBBO_RPC_RESULT_EMPTY.
+     */
+    String DUBBO_RPC_RESULT_EMPTY = "dubbo has not return value!";
+
+    /**
      * The constant CLIENT_RESPONSE_RESULT_TYPE.
      */
     String CLIENT_RESPONSE_RESULT_TYPE = "webHandlerClientResponseResultType";
+
+
+    /**
+     * The constant CLIENT_RESPONSE_CONN_ATTR.
+     */
+    String CLIENT_RESPONSE_CONN_ATTR = "nettyClientResponseConnection";
+
+    /**
+     * The constant HTTP_TIME_OUT.
+     */
+    String HTTP_TIME_OUT = "httpTimeOut";
+
+    /**
+     * Original response Content-Type attribute name.
+     */
+    String ORIGINAL_RESPONSE_CONTENT_TYPE_ATTR = "original_response_content_type";
+
+
+    /**
+     * The constant HTTP_URL.
+     */
+    String HTTP_URL = "httpUrl";
 
     /**
      * The constant DUBBO_PARAMS.
      */
     String DUBBO_PARAMS = "dubbo_params";
+
+    /**
+     * The constant DECODE.
+     */
+    String DECODE = "UTF-8";
 
     /**
      * The constant MODULE.
@@ -61,11 +98,6 @@ public interface Constants {
     String METHOD = "method";
 
     /**
-     * The constant CONTENT.
-     */
-    String CONTENT = "content";
-
-    /**
      * The constant APP_KEY.
      */
     String APP_KEY = "appKey";
@@ -74,6 +106,11 @@ public interface Constants {
      * The constant EXT_INFO.
      */
     String EXT_INFO = "extInfo";
+
+    /**
+     * The constant PATH_VARIABLE.
+     */
+    String PATH_VARIABLE = "pathVariable";
 
     /**
      * The constant HTTP_METHOD.
@@ -91,24 +128,39 @@ public interface Constants {
     String SIGN = "sign";
 
     /**
+     * The constant PATH.
+     */
+    String PATH = "path";
+
+    /**
+     * The constant VERSION.
+     */
+    String VERSION = "version";
+
+    /**
+     * The constant SIGN_PARAMS_ERROR.
+     */
+    String SIGN_PARAMS_ERROR = "认证参数传入不完整!";
+
+    /**
+     * The constant SIGN_APP_KEY_IS_NOT_EXIST.
+     */
+    String SIGN_APP_KEY_IS_NOT_EXIST = "认证签名APP_KEY,不存在";
+
+    /**
+     * The constant SIGN_PATH_NOT_EXIST.
+     */
+    String SIGN_PATH_NOT_EXIST = "认证Key未配置路径获取未匹配";
+
+    /**
+     * The constant SIGN_VALUE_IS_ERROR.
+     */
+    String SIGN_VALUE_IS_ERROR = "签名值错误！";
+
+    /**
      * The constant TIMESTAMP.
      */
     String TIMESTAMP = "timestamp";
-
-    /**
-     * The constant RETRY.
-     */
-    int RETRY = 3;
-
-    /**
-     * The constant SOUL_DISRUPTOR_THREAD_NAME.
-     */
-    String SOUL_DISRUPTOR_THREAD_NAME = "soul-disruptor";
-
-    /**
-     * The constant SOUL_THREAD_NAME.
-     */
-    String SOUL_THREAD_NAME = "soul-thread";
 
     /**
      * The constant REJECT_MSG.
@@ -143,7 +195,7 @@ public interface Constants {
     /**
      * The constant UPSTREAM_NOT_FIND.
      */
-    String UPSTREAM_NOT_FIND = "this can not rule upstream please check you config!";
+    String UPSTREAM_NOT_FIND = "this can not rule upstream please check you configuration!";
 
     /**
      * The constant TOO_MANY_REQUESTS.
@@ -183,7 +235,7 @@ public interface Constants {
     /**
      * The constant TIME_OUT.
      */
-    int TIME_OUT = 3000;
+    long TIME_OUT = 3000;
 
     /**
      * The constant COLONS.

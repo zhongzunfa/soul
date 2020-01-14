@@ -18,12 +18,15 @@
 
 package org.dromara.soul.test.http.controller;
 
-
+import org.dromara.soul.client.common.annotation.SoulClient;
 import org.dromara.soul.test.http.dto.UserDTO;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -35,17 +38,52 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/test")
 public class HttpTestController {
 
-
+    /**
+     * Post user dto.
+     *
+     * @param userDTO the user dto
+     * @return the user dto
+     */
     @PostMapping("/payment")
+    @SoulClient(path = "/test/payment", desc = "支付接口")
     public UserDTO post(@RequestBody final UserDTO userDTO) {
         return userDTO;
     }
 
-
+    /**
+     * Find by user id string.
+     *
+     * @param userId the user id
+     * @return the string
+     */
     @GetMapping("/findByUserId")
-    public String findByUserId() {
-        return "helloWorld!";
+    @SoulClient(path = "/test/findByUserId", desc = "获取用户id")
+    public String findByUserId(@RequestParam("userId") final String userId) {
+        return "hello :" + userId;
     }
 
+    /**
+     * Gets path variable.
+     *
+     * @param id   the id
+     * @param name the name
+     * @return the path variable
+     */
+    @GetMapping("/path/{id}")
+    public String getPathVariable(@PathVariable("id") final String id, @RequestParam("name") final String name) {
+        return id + "_" + name;
+    }
+
+    /**
+     * Put path variable and body string.
+     *
+     * @param id      the id
+     * @param userDTO the user dto
+     * @return the string
+     */
+    @PutMapping("/putPathBody/{id}")
+    public String putPathVariableAndBody(@PathVariable("id") final String id, @RequestBody final UserDTO userDTO) {
+        return id + "_" + userDTO.getUserName();
+    }
 
 }

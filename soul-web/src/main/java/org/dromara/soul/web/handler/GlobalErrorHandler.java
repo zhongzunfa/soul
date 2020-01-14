@@ -18,88 +18,78 @@
 
 package org.dromara.soul.web.handler;
 
+import org.dromara.soul.common.utils.GsonUtils;
+import org.dromara.soul.web.result.SoulResultWarp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.web.ErrorProperties;
+import org.springframework.boot.autoconfigure.web.ResourceProperties;
+import org.springframework.boot.autoconfigure.web.reactive.error.DefaultErrorWebExceptionHandler;
+import org.springframework.boot.web.reactive.error.ErrorAttributes;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.codec.HttpMessageWriter;
-import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.server.HandlerStrategies;
+import org.springframework.web.reactive.function.server.RequestPredicates;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.RouterFunctions;
+import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import org.springframework.web.reactive.result.view.ViewResolver;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebExceptionHandler;
-import reactor.core.publisher.Mono;
 
-import java.util.List;
-
-import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
+import java.util.Map;
 
 /**
  * GlobalErrorHandler.
  *
  * @author xiaoyu(Myth)
  */
-@Component
-public class GlobalErrorHandler implements WebExceptionHandler {
+public class GlobalErrorHandler extends DefaultErrorWebExceptionHandler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalErrorHandler.class);
+
     /**
-     * Handle the given exception. A completion signal through the return value
-     * indicates error handling is complete while an error signal indicates the
-     * exception is still not handled.
+     * Instantiates a new Global error handler.
      *
-     * @param exchange the current exchange
-     * @param ex       the exception to handle
-     * @return {@code Mono<Void>} to indicate when exception handling is complete
+     * @param errorAttributes    the error attributes
+     * @param resourceProperties the resource properties
+     * @param errorProperties    the error properties
+     * @param applicationContext the application context
      */
+    public GlobalErrorHandler(final ErrorAttributes errorAttributes,
+                              final ResourceProperties resourceProperties,
+                              final ErrorProperties errorProperties,
+                              final ApplicationContext applicationContext) {
+        super(errorAttributes, resourceProperties, errorProperties, applicationContext);
+    }
+
     @Override
-    public Mono<Void> handle(final ServerWebExchange exchange, final Throwable ex) {
-        return handle(ex).flatMap(it -> it.writeTo(exchange,
-                new HandlerStrategiesResponseContext(HandlerStrategies.withDefaults())))
-                .flatMap(i -> Mono.empty());
+    protected Map<String, Object> getErrorAttributes(final ServerRequest request, final boolean includeStackTrace) {
+        logError(request);
+        return response();
     }
 
-
-    private Mono<ServerResponse> handle(Throwable ex) {
-        return createResponse(INTERNAL_SERVER_ERROR, "GENERIC_ERROR", "Unhandled exception");
+    @Override
+    protected RouterFunction<ServerResponse> getRoutingFunction(final ErrorAttributes errorAttributes) {
+        return RouterFunctions.route(RequestPredicates.all(), this::renderErrorResponse);
     }
 
-    private Mono<ServerResponse> createResponse(final HttpStatus httpStatus, final String code, final String mesage) {
-
-        return ServerResponse.status(httpStatus).syncBody(mesage);
+    @Override
+    protected HttpStatus getHttpStatus(final Map<String, Object> errorAttributes) {
+        return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
-    /**
-     * The type Handler strategies response context.
-     */
-    static class HandlerStrategiesResponseContext implements ServerResponse.Context {
+    private static Map<String, Object> response() {
+        Object error = SoulResultWarp.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), null);
+        return GsonUtils.getInstance().toObjectMap(GsonUtils.getInstance().toJson(error));
+    }
 
-        private HandlerStrategies handlerStrategies;
+    private void logError(final ServerRequest request) {
+        Throwable ex = getError(request);
+        LOGGER.error(request.exchange().getLogPrefix() + formatError(ex, request));
+    }
 
-        /**
-         * Instantiates a new Handler strategies response context.
-         *
-         * @param handlerStrategies the handler strategies
-         */
-        public HandlerStrategiesResponseContext(final HandlerStrategies handlerStrategies) {
-            this.handlerStrategies = handlerStrategies;
-        }
-
-        /**
-         * Return the {@link HttpMessageWriter}s to be used for response body conversion.
-         *
-         * @return the list of message writers
-         */
-        @Override
-        public List<HttpMessageWriter<?>> messageWriters() {
-            return this.handlerStrategies.messageWriters();
-        }
-
-        /**
-         * Return the  {@link ViewResolver}s to be used for view name resolution.
-         *
-         * @return the list of view resolvers
-         */
-        @Override
-        public List<ViewResolver> viewResolvers() {
-            return this.handlerStrategies.viewResolvers();
-        }
+    private String formatError(final Throwable ex, final ServerRequest request) {
+        String reason = ex.getClass().getSimpleName() + ": " + ex.getMessage();
+        return "Resolved [" + reason + "] for HTTP " + request.methodName() + " "
+                + request.path();
     }
 
 }

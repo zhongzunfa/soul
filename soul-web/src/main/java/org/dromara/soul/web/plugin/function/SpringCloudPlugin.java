@@ -20,27 +20,30 @@ package org.dromara.soul.web.plugin.function;
 
 import org.apache.commons.lang.StringUtils;
 import org.dromara.soul.common.constant.Constants;
-import org.dromara.soul.common.dto.convert.SpringCloudHandle;
-import org.dromara.soul.common.dto.zk.RuleZkDTO;
+import org.dromara.soul.common.dto.RuleData;
+import org.dromara.soul.common.dto.SelectorData;
+import org.dromara.soul.common.dto.convert.rule.SpringCloudRuleHandle;
 import org.dromara.soul.common.enums.PluginEnum;
 import org.dromara.soul.common.enums.PluginTypeEnum;
 import org.dromara.soul.common.enums.ResultEnum;
 import org.dromara.soul.common.enums.RpcTypeEnum;
-import org.dromara.soul.common.utils.GSONUtils;
-import org.dromara.soul.common.utils.LogUtils;
-import org.dromara.soul.web.cache.ZookeeperCacheManager;
+import org.dromara.soul.common.utils.GsonUtils;
+import org.dromara.soul.web.cache.LocalCacheManager;
 import org.dromara.soul.web.plugin.AbstractSoulPlugin;
 import org.dromara.soul.web.plugin.SoulPluginChain;
+import org.dromara.soul.web.plugin.hystrix.HttpCommand;
 import org.dromara.soul.web.plugin.hystrix.HystrixBuilder;
-import org.dromara.soul.web.plugin.hystrix.SpringCloudCommand;
 import org.dromara.soul.web.request.RequestDTO;
+import org.dromara.soul.web.result.SoulResultEnum;
+import org.dromara.soul.web.result.SoulResultUtils;
+import org.dromara.soul.web.result.SoulResultWarp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 import rx.Subscription;
 
 import java.net.URI;
@@ -57,59 +60,61 @@ public class SpringCloudPlugin extends AbstractSoulPlugin {
 
     private final LoadBalancerClient loadBalancer;
 
-    public SpringCloudPlugin(final ZookeeperCacheManager zookeeperCacheManager, final LoadBalancerClient loadBalancer) {
-        super(zookeeperCacheManager);
+    /**
+     * Instantiates a new Spring cloud plugin.
+     *
+     * @param localCacheManager the local cache manager
+     * @param loadBalancer      the load balancer
+     */
+    public SpringCloudPlugin(final LocalCacheManager localCacheManager, final LoadBalancerClient loadBalancer) {
+        super(localCacheManager);
         this.loadBalancer = loadBalancer;
     }
 
     @Override
-    protected Mono<Void> doExecute(final ServerWebExchange exchange, final SoulPluginChain chain, final RuleZkDTO rule) {
+    protected Mono<Void> doExecute(final ServerWebExchange exchange, final SoulPluginChain chain, final SelectorData selector, final RuleData rule) {
         if (Objects.isNull(rule)) {
             return Mono.empty();
         }
-
         final RequestDTO requestDTO = exchange.getAttribute(Constants.REQUESTDTO);
-
         assert requestDTO != null;
-
-        final SpringCloudHandle handle = GSONUtils.getInstance().fromJson(rule.getHandle(), SpringCloudHandle.class);
-
-        if (StringUtils.isBlank(handle.getGroupKey())) {
-            handle.setGroupKey(requestDTO.getModule());
+        final SpringCloudRuleHandle ruleHandle = GsonUtils.getInstance().fromJson(rule.getHandle(), SpringCloudRuleHandle.class);
+        final String serviceId = selector.getHandle();
+        if (StringUtils.isBlank(ruleHandle.getGroupKey())) {
+            ruleHandle.setGroupKey(requestDTO.getModule());
+        }
+        if (StringUtils.isBlank(ruleHandle.getCommandKey())) {
+            ruleHandle.setCommandKey(requestDTO.getMethod());
+        }
+        if (StringUtils.isBlank(serviceId) || StringUtils.isBlank(ruleHandle.getPath())) {
+            Object error = SoulResultWarp.error(SoulResultEnum.CANNOT_CONFIG_SPRINGCLOUD_SERVICEID.getCode(), SoulResultEnum.CANNOT_CONFIG_SPRINGCLOUD_SERVICEID.getMsg(), null);
+            return SoulResultUtils.result(exchange, error);
         }
 
-        if (StringUtils.isBlank(handle.getCommandKey())) {
-            handle.setCommandKey(requestDTO.getMethod());
-        }
-
-        if (StringUtils.isBlank(handle.getServiceId()) || StringUtils.isBlank(handle.getPath())) {
-            LogUtils.error(LOGGER, () -> "can not config spring cloud handle....");
-            return Mono.empty();
-        }
-
-        final ServiceInstance serviceInstance = loadBalancer.choose(handle.getServiceId());
-
+        final ServiceInstance serviceInstance = loadBalancer.choose(serviceId);
         if (Objects.isNull(serviceInstance)) {
-            LogUtils.error(LOGGER, () -> "eureka never register this serviceId " + handle.getServiceId());
-            return Mono.empty();
+            Object error = SoulResultWarp.error(SoulResultEnum.SPRINGCLOUD_SERVICEID_IS_ERROR.getCode(), SoulResultEnum.SPRINGCLOUD_SERVICEID_IS_ERROR.getMsg(), null);
+            return SoulResultUtils.result(exchange, error);
         }
+        final URI uri = loadBalancer.reconstructURI(serviceInstance, URI.create(requestDTO.getRealUrl()));
 
-        final URI uri = loadBalancer.reconstructURI(serviceInstance, URI.create(handle.getPath()));
+        String realURL = buildRealURL(uri.toASCIIString(), requestDTO.getHttpMethod(), exchange.getRequest().getURI().getQuery());
 
+        exchange.getAttributes().put(Constants.HTTP_URL, realURL);
+        //设置下超时时间
+        exchange.getAttributes().put(Constants.HTTP_TIME_OUT, ruleHandle.getTimeout());
 
-        SpringCloudCommand command =
-                new SpringCloudCommand(HystrixBuilder.build(handle),
-                        exchange, chain, handle, requestDTO, uri);
+        HttpCommand command = new HttpCommand(HystrixBuilder.build(ruleHandle), exchange, chain);
 
-        return Mono.create((MonoSink<Object> s) -> {
+        return Mono.create(s -> {
             Subscription sub = command.toObservable().subscribe(s::success,
                     s::error, s::success);
             s.onCancel(sub::unsubscribe);
             if (command.isCircuitBreakerOpen()) {
-                LogUtils.error(LOGGER, () -> handle.getGroupKey() + ":spring cloud execute circuitBreaker is Open !");
+                LOGGER.error("http execute 过程中发生了熔断 circuitBreaker is Open! 组key为:{}", ruleHandle.getGroupKey());
             }
         }).doOnError(throwable -> {
-            throwable.printStackTrace();
+            LOGGER.error("springcloud 调用异常:", throwable);
             exchange.getAttributes().put(Constants.CLIENT_RESPONSE_RESULT_TYPE,
                     ResultEnum.ERROR.getName());
             chain.execute(exchange);
@@ -141,5 +146,14 @@ public class SpringCloudPlugin extends AbstractSoulPlugin {
     public Boolean skip(final ServerWebExchange exchange) {
         final RequestDTO body = exchange.getAttribute(Constants.REQUESTDTO);
         return !Objects.equals(Objects.requireNonNull(body).getRpcType(), RpcTypeEnum.SPRING_CLOUD.getName());
+    }
+
+    private String buildRealURL(final String url, final String httpMethod, final String query) {
+        if (httpMethod.equals(HttpMethod.GET.name())) {
+            if (StringUtils.isNotBlank(query)) {
+                return url + "?" + query;
+            }
+        }
+        return url;
     }
 }

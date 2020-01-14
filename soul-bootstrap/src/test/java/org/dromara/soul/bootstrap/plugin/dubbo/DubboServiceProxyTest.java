@@ -19,32 +19,41 @@
 package org.dromara.soul.bootstrap.plugin.dubbo;
 
 import org.dromara.soul.bootstrap.BaseTest;
-import org.dromara.soul.common.dto.convert.DubboHandle;
-import org.dromara.soul.common.utils.GSONUtils;
+import org.dromara.soul.common.dto.convert.rule.DubboRuleHandle;
+import org.dromara.soul.common.dto.convert.selector.DubboSelectorHandle;
 import org.dromara.soul.web.plugin.dubbo.DubboProxyService;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
+ * The type Dubbo service proxy test.
+ *
  * @author xiaoyu(Myth)
  */
 public class DubboServiceProxyTest extends BaseTest {
 
-
     @Autowired(required = false)
     private DubboProxyService dubboProxyService;
 
-    private DubboHandle dubboHandle;
+    private DubboSelectorHandle selectorHandle;
 
+    private DubboRuleHandle ruleHandle;
+
+    /**
+     * Before.
+     */
     @Before
     public void before() {
-        dubboHandle = new DubboHandle();
-        dubboHandle.setAppName("local");
-        dubboHandle.setRegistry("zookeeper://localhost:2181");
-        dubboHandle.setTimeout(3000);
+        selectorHandle = new DubboSelectorHandle();
+        selectorHandle.setAppName("local");
+        selectorHandle.setRegistry("zookeeper://localhost:2181");
+        ruleHandle = new DubboRuleHandle();
     }
 
+    /**
+     * Test dubbo entity param.
+     */
     @Test
     public void testDubboEntityParam() {
         String json = "{\n" +
@@ -58,10 +67,13 @@ public class DubboServiceProxyTest extends BaseTest {
                 "  }]\n" +
                 "}";
 
-        final Object o = dubboProxyService.genericInvoker(GSONUtils.getInstance().toObjectMap(json), dubboHandle);
-        System.out.println(o.toString());
+      /*  final Object o = dubboProxyService.genericInvoker(GsonUtils.getInstance().toObjectMap(json), selectorHandle, ruleHandle);
+        System.out.println(o.toString());*/
     }
 
+    /**
+     * Test dubbo entity string integer param.
+     */
     @Test
     public void testDubboEntityStringIntegerParam() {
         String json = "{" +
@@ -78,10 +90,13 @@ public class DubboServiceProxyTest extends BaseTest {
                 "    \"java.lang.Integer\":\"1\"\n" +
                 "  }\n" +
                 "}";
-        final Object o = dubboProxyService.genericInvoker(GSONUtils.getInstance().toObjectMap(json), dubboHandle);
-        System.out.println(o.toString());
+       /* final Object o = dubboProxyService.genericInvoker(GsonUtils.getInstance().toObjectMap(json), selectorHandle, ruleHandle);
+        System.out.println(o.toString());*/
     }
 
+    /**
+     * Test dubbo string param.
+     */
     @Test
     public void testDubboStringParam() {
         String json = "{\n" +
@@ -95,10 +110,13 @@ public class DubboServiceProxyTest extends BaseTest {
                 "    ]\n" +
                 "  }\n" +
                 "}";
-        final Object o = dubboProxyService.genericInvoker(GSONUtils.getInstance().toObjectMap(json), dubboHandle);
-        System.out.println(o.toString());
+       /* final Object o = dubboProxyService.genericInvoker(GsonUtils.getInstance().toObjectMap(json), selectorHandle, ruleHandle);
+        System.out.println(o.toString());*/
     }
 
+    /**
+     * Test list entity.
+     */
     @Test
     public void testListEntity() {
         String json = "{\n" +
@@ -121,8 +139,8 @@ public class DubboServiceProxyTest extends BaseTest {
                 "        }\n" +
                 "    ]\n" +
                 "}";
-        final Object o = dubboProxyService.genericInvoker(GSONUtils.getInstance().toObjectMap(json), dubboHandle);
-        System.out.println(o.toString());
+      /*  final Object o = dubboProxyService.genericInvoker(GsonUtils.getInstance().toObjectMap(json), selectorHandle, ruleHandle);
+        System.out.println(o.toString());*/
 
     }
 

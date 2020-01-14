@@ -19,44 +19,45 @@
 package org.dromara.soul.configuration.zookeeper;
 
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.serialize.ZkSerializer;
 import org.dromara.soul.configuration.zookeeper.serializer.ZkSerializerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.SearchStrategy;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
-
-import java.util.Objects;
 
 /**
  * ZookeeperConfiguration .
  *
  * @author xiaoyu(Myth)
  */
-@Configuration
+@EnableConfigurationProperties(ZookeeperConfig.class)
 public class ZookeeperConfiguration {
 
-    private final Environment env;
-
     /**
-     * Instantiates a new Zookeeper configuration.
+     * Zk serializer zk serializer.
      *
-     * @param env the env
+     * @param zookeeperConfig the zookeeper configuration
+     * @return the zk serializer
      */
-    @Autowired
-    public ZookeeperConfiguration(final Environment env) {
-        this.env = env;
+    @Bean
+    @ConditionalOnMissingBean(value = ZkSerializer.class, search = SearchStrategy.ALL)
+    public ZkSerializer zkSerializer(ZookeeperConfig zookeeperConfig) {
+        return ZkSerializerFactory.of(zookeeperConfig.getSerializer());
     }
 
     /**
      * register zkClient in spring ioc.
      *
+     * @param zookeeperConfig the zookeeper configuration
+     * @param zkSerializer    the zk serializer
      * @return ZkClient {@linkplain ZkClient}
      */
     @Bean
-    public ZkClient zkClient() {
-        return new ZkClient(env.getProperty("spring.zookeeper.url"),
-                Integer.parseInt(Objects.requireNonNull(env.getProperty("spring.zookeeper.sessionTimeout"))),
-                Integer.parseInt(Objects.requireNonNull(env.getProperty("spring.zookeeper.connectionTimeout"))),
-                ZkSerializerFactory.of(env.getProperty("spring.zookeeper.serializer")));
+    public ZkClient zkClient(ZookeeperConfig zookeeperConfig, ZkSerializer zkSerializer) {
+        return new ZkClient(zookeeperConfig.getUrl(),
+                zookeeperConfig.getSessionTimeout(),
+                zookeeperConfig.getConnectionTimeout(),
+                zkSerializer);
     }
 }

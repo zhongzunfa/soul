@@ -27,10 +27,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
  * SignUtils.
+ *
  * @author xiaoyu
  */
 public final class SignUtils {
@@ -38,7 +40,6 @@ public final class SignUtils {
     private static final SignUtils SIGN_UTILS = new SignUtils();
 
     private SignUtils() {
-
     }
 
     /**
@@ -54,10 +55,10 @@ public final class SignUtils {
      * acquired sign.
      *
      * @param signKey sign key
-     * @param params params
+     * @param params  params
      * @return sign
      */
-    private static String generateSign(final String signKey, final Map<String, String> params) {
+    public static String generateSign(final String signKey, final Map<String, String> params) {
         List<String> storedKeys = Arrays.stream(params.keySet()
                 .toArray(new String[]{}))
                 .sorted(Comparator.naturalOrder())
@@ -73,12 +74,22 @@ public final class SignUtils {
     /**
      * isValid.
      *
-     * @param sign sign
-     * @param params params
+     * @param sign    sign
+     * @param params  params
      * @param signKey signKey
-     * @return boolean
+     * @return boolean boolean
      */
     public boolean isValid(final String sign, final Map<String, String> params, final String signKey) {
         return Objects.equals(sign, generateSign(signKey, params));
     }
+
+    /**
+     * Generate key string.
+     *
+     * @return the string
+     */
+    public String generateKey() {
+        return UUID.randomUUID().toString().replaceAll("-", "").toUpperCase();
+    }
+
 }

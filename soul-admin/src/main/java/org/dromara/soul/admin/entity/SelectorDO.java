@@ -21,10 +21,12 @@ package org.dromara.soul.admin.entity;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import org.dromara.soul.admin.dto.SelectorDTO;
+import org.dromara.soul.common.dto.ConditionData;
+import org.dromara.soul.common.dto.SelectorData;
 import org.dromara.soul.common.utils.UUIDUtils;
 
 import java.sql.Timestamp;
-import java.util.Date;
+import java.util.List;
 
 /**
  * SelectorDO.
@@ -74,6 +76,8 @@ public class SelectorDO extends BaseDO {
      */
     private Boolean continued;
 
+    private String handle;
+
     /**
      * build selectorDO.
      *
@@ -85,7 +89,7 @@ public class SelectorDO extends BaseDO {
             SelectorDO selectorDO = new SelectorDO();
             Timestamp currentTime = new Timestamp(System.currentTimeMillis());
             if (StringUtils.isEmpty(selectorDTO.getId())) {
-                selectorDO.setId(UUIDUtils.generateShortUuid());
+                selectorDO.setId(UUIDUtils.getInstance().generateShortUuid());
                 selectorDO.setDateCreated(currentTime);
             } else {
                 selectorDO.setId(selectorDTO.getId());
@@ -100,8 +104,24 @@ public class SelectorDO extends BaseDO {
             selectorDO.setLoged(selectorDTO.getLoged());
             selectorDO.setContinued(selectorDTO.getContinued());
             selectorDO.setDateUpdated(currentTime);
+            selectorDO.setHandle(selectorDTO.getHandle());
             return selectorDO;
         }
         return null;
+    }
+
+    public static SelectorData transFrom(final SelectorDO selectorDO, final String pluginName, final List<ConditionData> conditionDataList) {
+        return new SelectorData(selectorDO.getId(),
+                selectorDO.getPluginId(),
+                pluginName,
+                selectorDO.getName(),
+                selectorDO.getMatchMode(),
+                selectorDO.getType(),
+                selectorDO.getSort(),
+                selectorDO.getEnabled(),
+                selectorDO.getLoged(),
+                selectorDO.getContinued(),
+                selectorDO.getHandle(),
+                conditionDataList);
     }
 }

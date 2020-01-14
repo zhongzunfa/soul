@@ -19,12 +19,17 @@
 package org.dromara.soul.web.request;
 
 import lombok.Data;
+import org.apache.commons.lang3.StringUtils;
 import org.dromara.soul.common.constant.Constants;
+import org.dromara.soul.common.dto.MetaData;
 import org.dromara.soul.common.enums.HttpMethodEnum;
 import org.dromara.soul.common.enums.RpcTypeEnum;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.util.MultiValueMap;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * the soul request DTO .
@@ -57,11 +62,6 @@ public class RequestDTO implements Serializable {
     private String httpMethod;
 
     /**
-     * this is dubbo params.
-     */
-    private String dubboParams;
-
-    /**
      * this is sign .
      */
     private String sign;
@@ -77,39 +77,47 @@ public class RequestDTO implements Serializable {
     private String appKey;
 
     /**
-     * content is json data.
+     * path.
      */
-    private String content;
+    private String path;
+
 
     /**
-     * extInfo is json data .
+     * the contextPath.
      */
-    private String extInfo;
+    private String contextPath;
 
     /**
-     * ServerHttpRequest transform RequestDTO .
+     * realUrl.
+     */
+    private String realUrl;
+
+    /**
+     * the metaData.
+     */
+    private MetaData metaData;
+
+    /**
+     * this is dubbo params.
+     */
+    private String dubboParams;
+
+    /**
+     * startDateTime.
+     */
+    private LocalDateTime startDateTime;
+
+    /**
+     * Transform map request dto.
      *
-     * @param request {@linkplain ServerHttpRequest}
-     * @return RequestDTO request dto
+     * @param queryParams the query params
+     * @return the request dto
      */
-    public static RequestDTO transform(final ServerHttpRequest request) {
-        final String module = request.getHeaders().getFirst(Constants.MODULE);
-        final String method = request.getHeaders().getFirst(Constants.METHOD);
-        final String appKey = request.getHeaders().getFirst(Constants.APP_KEY);
-        final String httpMethod = request.getHeaders().getFirst(Constants.HTTP_METHOD);
-        final String rpcType = request.getHeaders().getFirst(Constants.RPC_TYPE);
-        final String sign = request.getHeaders().getFirst(Constants.SIGN);
-        final String timestamp = request.getHeaders().getFirst(Constants.TIMESTAMP);
-        final String dubboParams = request.getHeaders().getFirst(Constants.DUBBO_PARAMS);
+    public static RequestDTO transformMap(final MultiValueMap<String, String> queryParams) {
         RequestDTO requestDTO = new RequestDTO();
-        requestDTO.setModule(module);
-        requestDTO.setMethod(method);
-        requestDTO.setAppKey(appKey);
-        requestDTO.setHttpMethod(httpMethod);
-        requestDTO.setRpcType(rpcType);
-        requestDTO.setSign(sign);
-        requestDTO.setTimestamp(timestamp);
-        requestDTO.setDubboParams(dubboParams);
+        requestDTO.setModule(queryParams.getFirst(Constants.MODULE));
+        requestDTO.setMethod(queryParams.getFirst(Constants.METHOD));
+        requestDTO.setRpcType(queryParams.getFirst(Constants.RPC_TYPE));
         return requestDTO;
     }
 

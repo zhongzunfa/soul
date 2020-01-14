@@ -43,12 +43,12 @@ public enum ParamTypeEnum {
     /**
      * Uri param type enum.
      */
-    URI("uri", false),
+    URI("uri", true),
 
     /**
      * Query param type enum.
      */
-    QUERY("query", false),
+    QUERY("query", true),
 
     /**
      * Host param type enum.

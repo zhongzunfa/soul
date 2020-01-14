@@ -19,11 +19,7 @@
 package org.dromara.soul.configuration.zookeeper.serializer;
 
 import org.I0Itec.zkclient.serialize.ZkSerializer;
-import org.dromara.soul.common.utils.SpiLoadFactory;
-
-import java.util.Objects;
-import java.util.ServiceLoader;
-import java.util.stream.StreamSupport;
+import org.dromara.soul.common.enums.SerializeEnum;
 
 /**
  * ZkSerializer Factory.
@@ -32,19 +28,26 @@ import java.util.stream.StreamSupport;
  */
 public class ZkSerializerFactory {
 
-    private static final ServiceLoader<ZkSerializer> SERVICE_LOADER = SpiLoadFactory.loadAll(ZkSerializer.class);
 
     /**
-     * product  ZkSerializer with className.
+     * Of zk serializer.
      *
-     * @param className className
-     * @return ZkSerializer zk serializer
+     * @param name the name
+     * @return the zk serializer
      */
-    public static ZkSerializer of(final String className) {
-        return StreamSupport.stream(SERVICE_LOADER.spliterator(), false)
-                .filter(service ->
-                        Objects.equals(service.getClass().getName().substring(service.getClass().getName().lastIndexOf(".") + 1,
-                                service.getClass().getName().length()),
-                                className)).findFirst().orElse(new KryoSerializer());
+    public static ZkSerializer of(final String name) {
+        final SerializeEnum serializeEnum = SerializeEnum.acquire(name);
+        switch (serializeEnum) {
+            case KRYO:
+                return new KryoSerializer();
+            case JDK:
+                return new JavaSerializer();
+            case HESSIAN:
+                return new HessianSerializer();
+            case PROTOSTUFF:
+                return new ProtostuffSerializer();
+            default:
+                return new JavaSerializer();
+        }
     }
 }

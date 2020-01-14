@@ -18,14 +18,12 @@
 
 package org.dromara.soul.web.cache;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.dromara.soul.common.dto.convert.DivideHandle;
+import org.apache.commons.collections4.CollectionUtils;
+import org.dromara.soul.common.concurrent.SoulThreadFactory;
+import org.dromara.soul.common.dto.SelectorData;
 import org.dromara.soul.common.dto.convert.DivideUpstream;
-import org.dromara.soul.common.dto.zk.RuleZkDTO;
-import org.dromara.soul.common.utils.GSONUtils;
-import org.dromara.soul.common.utils.UrlUtils;
-import org.dromara.soul.web.concurrent.SoulThreadFactory;
+import org.dromara.soul.common.utils.GsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -33,10 +31,8 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -47,25 +43,22 @@ import java.util.concurrent.TimeUnit;
  * @author xiaoyu
  */
 @Component
-@SuppressWarnings("all")
 public class UpstreamCacheManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UpstreamCacheManager.class);
 
-    private static final BlockingQueue<RuleZkDTO> BLOCKING_QUEUE = new LinkedBlockingQueue<>(1024);
-
-    private static final int MAX_THREAD = Runtime.getRuntime().availableProcessors() << 1;
+    private static final BlockingQueue<SelectorData> BLOCKING_QUEUE = new LinkedBlockingQueue<>(1024);
 
     private static final Map<String, List<DivideUpstream>> UPSTREAM_MAP = Maps.newConcurrentMap();
 
     /**
-     * acquire DivideUpstream list by ruleId.
+     * Find upstream list by selector id list.
      *
-     * @param ruleId ruleId
-     * @return DivideUpstream list {@linkplain  DivideUpstream}
+     * @param selectorId the selector id
+     * @return the list
      */
-    public List<DivideUpstream> findUpstreamListByRuleId(final String ruleId) {
-        return UPSTREAM_MAP.get(ruleId);
+    public List<DivideUpstream> findUpstreamListBySelectorId(final String selectorId) {
+        return UPSTREAM_MAP.get(selectorId);
     }
 
     /**
@@ -73,7 +66,7 @@ public class UpstreamCacheManager {
      *
      * @param key the key
      */
-    protected static void removeByKey(final String key) {
+    static void removeByKey(final String key) {
         UPSTREAM_MAP.remove(key);
     }
 
@@ -82,49 +75,46 @@ public class UpstreamCacheManager {
      */
     @PostConstruct
     public void init() {
-        synchronized (LOGGER) {
-            ExecutorService executorService = new ThreadPoolExecutor(MAX_THREAD, MAX_THREAD,
-                    0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<>(),
-                    SoulThreadFactory.create("divide-upstream-task",
-                            false));
-            for (int i = 0; i < MAX_THREAD; i++) {
-                executorService.execute(new Worker());
-            }
-        }
+        new ThreadPoolExecutor(1, 1,
+                0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(),
+                SoulThreadFactory.create("save-upstream-task", false))
+                .execute(new Worker());
     }
 
     /**
      * Submit.
      *
-     * @param ruleZkDTO the rule zk dto
+     * @param selectorData the selector data
      */
-    public static void submit(final RuleZkDTO ruleZkDTO) {
+    static void submit(final SelectorData selectorData) {
         try {
-            BLOCKING_QUEUE.put(ruleZkDTO);
+            BLOCKING_QUEUE.put(selectorData);
         } catch (InterruptedException e) {
             LOGGER.error(e.getMessage());
         }
     }
 
     /**
+     * Clear.
+     */
+    static void clear() {
+        UPSTREAM_MAP.clear();
+    }
+
+
+    /**
      * Execute.
      *
-     * @param ruleZkDTO the rule zk dto
+     * @param selectorData the selector data
      */
-    public void execute(final RuleZkDTO ruleZkDTO) {
-        final DivideHandle divideHandle =
-                GSONUtils.getInstance().fromJson(ruleZkDTO.getHandle(), DivideHandle.class);
-        if (Objects.nonNull(divideHandle)) {
-            final List<DivideUpstream> upstreamList = divideHandle.getUpstreamList();
-            List<DivideUpstream> resultList = Lists.newArrayListWithCapacity(upstreamList.size());
-            for (DivideUpstream divideUpstream : upstreamList) {
-                final boolean pass = UrlUtils.checkUrl(divideUpstream.getUpstreamUrl());
-                if (pass) {
-                    resultList.add(divideUpstream);
-                }
-            }
-            UPSTREAM_MAP.put(ruleZkDTO.getId(), resultList);
+    public void execute(final SelectorData selectorData) {
+        final List<DivideUpstream> upstreamList =
+                GsonUtils.getInstance().fromList(selectorData.getHandle(), DivideUpstream.class);
+        if (CollectionUtils.isNotEmpty(upstreamList)) {
+            UPSTREAM_MAP.put(selectorData.getId(), upstreamList);
+        } else {
+            UPSTREAM_MAP.remove(selectorData.getId());
         }
     }
 
@@ -139,12 +129,12 @@ public class UpstreamCacheManager {
         }
 
         private void runTask() {
-            while (true) {
+            for (;;) {
                 try {
-                    final RuleZkDTO ruleZkDTO = BLOCKING_QUEUE.take();
-                    Optional.of(ruleZkDTO).ifPresent(UpstreamCacheManager.this::execute);
-                } catch (Exception e) {
-                    LOGGER.error(" failure ," + e.getMessage());
+                    final SelectorData selectorData = BLOCKING_QUEUE.take();
+                    Optional.of(selectorData).ifPresent(UpstreamCacheManager.this::execute);
+                } catch (InterruptedException e) {
+                    LOGGER.warn("BLOCKING_QUEUE take operation was interrupted.", e);
                 }
             }
         }

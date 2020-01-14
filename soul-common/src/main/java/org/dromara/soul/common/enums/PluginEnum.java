@@ -21,7 +21,6 @@ package org.dromara.soul.common.enums;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 
 /**
@@ -36,68 +35,68 @@ public enum PluginEnum {
     /**
      * Global plugin enum.
      */
-    GLOBAL(1, "global"),
+    GLOBAL(1, 0, "global"),
 
     /**
      * Sign plugin enum.
      */
-    SIGN(2, "sign"),
+    SIGN(2, 0, "sign"),
 
     /**
      * Waf plugin enum.
      */
-    WAF(10, "waf"),
+    WAF(10, 0, "waf"),
 
     /**
      * Rate limiter plugin enum.
      */
-    RATE_LIMITER(20, "rate_limiter"),
+    RATE_LIMITER(20, 0, "rate_limiter"),
 
     /**
      * Rewrite plugin enum.
      */
-    REWRITE(30, "rewrite"),
+    REWRITE(30, 0, "rewrite"),
 
     /**
      * Redirect plugin enum.
      */
-    REDIRECT(40, "redirect"),
+    REDIRECT(40, 0, "redirect"),
 
     /**
      * Divide plugin enum.
      */
-    DIVIDE(50, "divide"),
-
-    /**
-     * Dubbo plugin enum.
-     */
-    DUBBO(60, "dubbo"),
+    DIVIDE(50, 0, "divide"),
 
     /**
      * springCloud plugin enum.
      */
-    SPRING_CLOUD(70, "springCloud"),
+    SPRING_CLOUD(50, 0, "springCloud"),
+
+    /**
+     * webSocket plugin enum.
+     */
+    WEB_SOCKET(55, 0, "webSocket"),
+
+    /**
+     * Dubbo plugin enum.
+     */
+    DUBBO(60, 0, "dubbo"),
 
     /**
      * Monitor plugin enum.
      */
-    MONITOR(80, "monitor");
+    MONITOR(80, 0, "monitor"),
+
+    /**
+     * Response plugin enum.
+     */
+    RESPONSE(100, 0, "response");
 
     private final int code;
 
-    private final String name;
+    private final int role;
 
-    /**
-     * get plugin enum by code.
-     *
-     * @param code plugin code.
-     * @return plugin enum.
-     */
-    public static PluginEnum getPluginEnumByCode(final int code) {
-        return Arrays.stream(PluginEnum.values())
-                .filter(pluginEnum -> pluginEnum.getCode() == code)
-                .findFirst().orElse(PluginEnum.GLOBAL);
-    }
+    private final String name;
 
     /**
      * get plugin enum by name.

@@ -18,46 +18,44 @@
 
 package org.dromara.soul.web.plugin.function;
 
-import com.netflix.hystrix.exception.HystrixRuntimeException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.dromara.soul.common.constant.Constants;
-import org.dromara.soul.common.dto.convert.DivideHandle;
+import org.dromara.soul.common.dto.RuleData;
+import org.dromara.soul.common.dto.SelectorData;
 import org.dromara.soul.common.dto.convert.DivideUpstream;
-import org.dromara.soul.common.dto.zk.RuleZkDTO;
+import org.dromara.soul.common.dto.convert.rule.DivideRuleHandle;
 import org.dromara.soul.common.enums.PluginEnum;
 import org.dromara.soul.common.enums.PluginTypeEnum;
 import org.dromara.soul.common.enums.ResultEnum;
 import org.dromara.soul.common.enums.RpcTypeEnum;
-import org.dromara.soul.common.utils.GSONUtils;
-import org.dromara.soul.common.utils.LogUtils;
-import org.dromara.soul.web.balance.LoadBalance;
-import org.dromara.soul.web.balance.factory.LoadBalanceFactory;
+import org.dromara.soul.common.utils.GsonUtils;
+import org.dromara.soul.web.balance.utils.LoadBalanceUtils;
+import org.dromara.soul.web.cache.LocalCacheManager;
 import org.dromara.soul.web.cache.UpstreamCacheManager;
-import org.dromara.soul.web.cache.ZookeeperCacheManager;
 import org.dromara.soul.web.plugin.AbstractSoulPlugin;
 import org.dromara.soul.web.plugin.SoulPluginChain;
 import org.dromara.soul.web.plugin.hystrix.HttpCommand;
 import org.dromara.soul.web.plugin.hystrix.HystrixBuilder;
 import org.dromara.soul.web.request.RequestDTO;
+import org.dromara.soul.web.result.SoulResultEnum;
+import org.dromara.soul.web.result.SoulResultUtils;
+import org.dromara.soul.web.result.SoulResultWarp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 import rx.Subscription;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
 
 /**
  * Divide Plugin.
  *
  * @author xiaoyu(Myth)
  */
-@SuppressWarnings("all")
 public class DividePlugin extends AbstractSoulPlugin {
 
     /**
@@ -65,80 +63,65 @@ public class DividePlugin extends AbstractSoulPlugin {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(DividePlugin.class);
 
-    private final ZookeeperCacheManager zookeeperCacheManager;
-
     private final UpstreamCacheManager upstreamCacheManager;
 
     /**
      * Instantiates a new Divide plugin.
      *
-     * @param zookeeperCacheManager the zookeeper cache manager
+     * @param localCacheManager    the local cache manager
+     * @param upstreamCacheManager the upstream cache manager
      */
-    public DividePlugin(final ZookeeperCacheManager zookeeperCacheManager, final UpstreamCacheManager upstreamCacheManager) {
-        super(zookeeperCacheManager);
-        this.zookeeperCacheManager = zookeeperCacheManager;
+    public DividePlugin(final LocalCacheManager localCacheManager, final UpstreamCacheManager upstreamCacheManager) {
+        super(localCacheManager);
         this.upstreamCacheManager = upstreamCacheManager;
     }
 
     @Override
-    protected Mono<Void> doExecute(final ServerWebExchange exchange, final SoulPluginChain chain, final RuleZkDTO rule) {
-
-        final RequestDTO body = exchange.getAttribute(Constants.REQUESTDTO);
-
-        final String handle = rule.getHandle();
-
-        final DivideHandle divideHandle = GSONUtils.getInstance().fromJson(handle, DivideHandle.class);
-
-        if (StringUtils.isBlank(divideHandle.getGroupKey())) {
-            divideHandle.setGroupKey(body.getModule());
+    protected Mono<Void> doExecute(final ServerWebExchange exchange, final SoulPluginChain chain, final SelectorData selector, final RuleData rule) {
+        final RequestDTO requestDTO = exchange.getAttribute(Constants.REQUESTDTO);
+        assert requestDTO != null;
+        final DivideRuleHandle ruleHandle = GsonUtils.getInstance().fromJson(rule.getHandle(), DivideRuleHandle.class);
+        if (StringUtils.isBlank(ruleHandle.getGroupKey())) {
+            ruleHandle.setGroupKey(Objects.requireNonNull(requestDTO).getModule());
         }
-
-        if (StringUtils.isBlank(divideHandle.getCommandKey())) {
-            divideHandle.setCommandKey(body.getMethod());
+        if (StringUtils.isBlank(ruleHandle.getCommandKey())) {
+            ruleHandle.setCommandKey(Objects.requireNonNull(requestDTO).getMethod());
         }
-
         final List<DivideUpstream> upstreamList =
-                upstreamCacheManager.findUpstreamListByRuleId(rule.getId());
+                upstreamCacheManager.findUpstreamListBySelectorId(selector.getId());
         if (CollectionUtils.isEmpty(upstreamList)) {
-            LogUtils.error(LOGGER, "divide upstream config error：{}", () -> rule.toString());
-            return chain.execute(exchange);
+            LOGGER.error("divide upstream configuration error：{}", rule.toString());
+            Object error = SoulResultWarp.error(SoulResultEnum.CANNOT_FIND_URL.getCode(), SoulResultEnum.CANNOT_FIND_URL.getMsg(), null);
+            return SoulResultUtils.result(exchange, error);
         }
-        DivideUpstream divideUpstream;
-        if (upstreamList.size() == 1) {
-            divideUpstream = upstreamList.get(0);
-        } else {
-            final LoadBalance loadBalance = LoadBalanceFactory.of(divideHandle.getLoadBalance());
-            final String ip = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
-            divideUpstream = loadBalance.select(divideHandle.getUpstreamList(), ip);
-        }
+        final String ip = Objects.requireNonNull(exchange.getRequest().getRemoteAddress()).getAddress().getHostAddress();
+        DivideUpstream divideUpstream =
+                LoadBalanceUtils.selector(upstreamList, ruleHandle.getLoadBalance(), ip);
         if (Objects.isNull(divideUpstream)) {
-            LogUtils.error(LOGGER, () -> "LoadBalance has error！");
-            return chain.execute(exchange);
+            LOGGER.error("divide has no upstream");
+            Object error = SoulResultWarp.error(SoulResultEnum.CANNOT_FIND_URL.getCode(), SoulResultEnum.CANNOT_FIND_URL.getMsg(), null);
+            return SoulResultUtils.result(exchange, error);
         }
+        //设置一下 http url
+        String domain = buildDomain(divideUpstream);
+        String realURL = buildRealURL(domain, requestDTO, exchange);
+        exchange.getAttributes().put(Constants.HTTP_URL, realURL);
+        //设置下超时时间
+        exchange.getAttributes().put(Constants.HTTP_TIME_OUT, ruleHandle.getTimeout());
+        HttpCommand command = new HttpCommand(HystrixBuilder.build(ruleHandle), exchange, chain);
 
-        HttpCommand command = new HttpCommand(HystrixBuilder.build(divideHandle),
-                divideUpstream, body, exchange, chain);
-        return Mono.create((MonoSink<Object> s) -> {
+        return Mono.create(s -> {
             Subscription sub = command.toObservable().subscribe(s::success,
                     s::error, s::success);
             s.onCancel(sub::unsubscribe);
             if (command.isCircuitBreakerOpen()) {
-                LogUtils.error(LOGGER, () -> divideHandle.getGroupKey() + "....http:circuitBreaker is Open.... !");
+                LOGGER.error("http execute 过程中发生了熔断 circuitBreaker is Open! 组key为:{}", ruleHandle.getGroupKey());
             }
-        }).onErrorResume((Function<Throwable, Mono<Void>>) throwable -> {
-            if (throwable instanceof HystrixRuntimeException) {
-                HystrixRuntimeException e = (HystrixRuntimeException) throwable;
-                LOGGER.error(e.getCause().getMessage());
-                if (e.getFailureType() == HystrixRuntimeException.FailureType.TIMEOUT) {
-                    exchange.getAttributes().put(Constants.CLIENT_RESPONSE_RESULT_TYPE, ResultEnum.TIME_OUT.getName());
-                    exchange.getResponse().setStatusCode(HttpStatus.GATEWAY_TIMEOUT);
-                } else {
-                    exchange.getAttributes().put(Constants.CLIENT_RESPONSE_RESULT_TYPE, ResultEnum.ERROR.getName());
-                    exchange.getResponse().setStatusCode(HttpStatus.BAD_GATEWAY);
-                }
-                return chain.execute(exchange);
-            }
-            return Mono.empty();
+        }).doOnError(throwable -> {
+            LOGGER.error("http 调用异常:", throwable);
+            exchange.getAttributes().put(Constants.CLIENT_RESPONSE_RESULT_TYPE,
+                    ResultEnum.ERROR.getName());
+            chain.execute(exchange);
         }).then();
     }
 
@@ -171,6 +154,34 @@ public class DividePlugin extends AbstractSoulPlugin {
     @Override
     public int getOrder() {
         return PluginEnum.DIVIDE.getCode();
+    }
+
+    private String buildDomain(final DivideUpstream divideUpstream) {
+        String protocol = divideUpstream.getProtocol();
+        if (StringUtils.isBlank(protocol)) {
+            protocol = "http://";
+        }
+        return protocol + divideUpstream.getUpstreamUrl().trim();
+    }
+
+    private String buildRealURL(final String domain, final RequestDTO requestDTO, final ServerWebExchange exchange) {
+        String path = domain;
+        final String rewriteURI = (String) exchange.getAttributes().get(Constants.REWRITE_URI);
+        if (StringUtils.isNoneBlank(rewriteURI)) {
+            path = path + rewriteURI;
+        } else {
+            final String realUrl = requestDTO.getRealUrl();
+            if (StringUtils.isNoneBlank(realUrl)) {
+                path = path + realUrl;
+            }
+        }
+        if (requestDTO.getHttpMethod().equals(HttpMethod.GET.name())) {
+            String query = exchange.getRequest().getURI().getQuery();
+            if (StringUtils.isNoneBlank(query)) {
+                return path + "?" + query;
+            }
+        }
+        return path;
     }
 
 }

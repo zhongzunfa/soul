@@ -22,6 +22,7 @@ import org.dromara.soul.admin.dto.RuleDTO;
 import org.dromara.soul.admin.page.CommonPager;
 import org.dromara.soul.admin.query.RuleQuery;
 import org.dromara.soul.admin.vo.RuleVO;
+import org.dromara.soul.common.dto.RuleData;
 
 import java.util.List;
 
@@ -33,10 +34,18 @@ import java.util.List;
 public interface RuleService {
 
     /**
+     * Register string.
+     *
+     * @param ruleDTO the rule dto
+     * @return the string
+     */
+    String register(RuleDTO ruleDTO);
+
+    /**
      * create or update rule.
      *
      * @param ruleDTO {@linkplain RuleDTO}
-     * @return rows
+     * @return rows int
      */
     int createOrUpdate(RuleDTO ruleDTO);
 
@@ -44,7 +53,7 @@ public interface RuleService {
      * delete rules.
      *
      * @param ids primary key.
-     * @return rows
+     * @return rows int
      */
     int delete(List<String> ids);
 
@@ -63,4 +72,20 @@ public interface RuleService {
      * @return {@linkplain CommonPager}
      */
     CommonPager<RuleVO> listByPage(RuleQuery ruleQuery);
+
+    /**
+     * List all list.
+     *
+     * @return the list
+     */
+    List<RuleData> listAll();
+
+    /**
+     * Find by selector id list.
+     *
+     * @param selectorId the selector id
+     * @return the list
+     */
+    List<RuleData> findBySelectorId(String selectorId);
+
 }
